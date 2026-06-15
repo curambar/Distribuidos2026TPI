@@ -25,8 +25,8 @@
         <div class="card p-3 mb-4">
             <h5>Agregar Nuevo Evento</h5>
             <div class="d-flex gap-2">
-                <input type="text" id="nuevo-nombre" class="form-control" placeholder="Nombre del Evento">
-                <input type="number" id="nuevo-entradas" class="form-control" placeholder="Cant. Entradas" style="width: 150px;">
+                <input type="text" id="nuevo-nombre" class="form-control" placeholder="Nombre del Evento" aria-label="Nombre del Evento">
+                <input type="number" id="nuevo-entradas" class="form-control" placeholder="Cant. Entradas" style="width: 150px;" aria-label="Cantidad de Entradas">
                 <button class="btn btn-danger" onclick="agregarEvento()">Crear</button>
             </div>
         </div>
@@ -43,20 +43,31 @@
     }
 
     async function cargarEventos() {
+        // 1. Guardamos lo que el usuario esté escribiendo en los inputs en este momento
+        const inputs = document.querySelectorAll('input[id^="cant-"]');
+        const valoresGuardados = {};
+        inputs.forEach(inp => valoresGuardados[inp.id] = inp.value);
+
+        // 2. Traemos los datos frescos del servidor
         const res = await fetch(`${API_URL}/eventos`);
         const eventos = await res.json();
+
         const contenedor = document.getElementById('contenedor-eventos');
         contenedor.innerHTML = '';
 
+        // 3. Redibujamos las tarjetas
         eventos.forEach(ev => {
             let agotado = ev.entradas === 0;
+            // Recuperamos el valor guardado (o ponemos 1 por defecto)
+            let valorActual = valoresGuardados[`cant-${ev.id}`] || 1;
+
             contenedor.innerHTML += `
                 <div class="col-md-4 mb-3">
                     <div class="card shadow-sm ${agotado ? 'border-danger' : 'border-success'}">
                         <div class="card-body">
                             <h5 class="card-title">${ev.nombre}</h5>
                             <p class="card-text">Disponibles: <strong>${ev.entradas}</strong></p>
-                            <input type="number" id="cant-${ev.id}" class="form-control mb-2" value="1" min="1" max="10" ${agotado ? 'disabled' : ''}>
+                            <input type="number" id="cant-${ev.id}" class="form-control mb-2" value="${valorActual}" min="1" max="10" ${agotado ? 'disabled' : ''}>
                             <button class="btn ${agotado ? 'btn-secondary' : 'btn-success'} w-100"
                                     onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
                                 ${agotado ? 'Agotado' : 'Comprar Entrada'}
@@ -69,14 +80,14 @@
 
     async function comprar(idEvento) {
         const cant = document.getElementById(`cant-${idEvento}`).value;
-        const cliente = "Cliente-" + Math.floor(Math.random() * 1000); // Simulamos un usuario
+        const cliente = "Cliente-" + Math.floor(Math.random() * 1000);
 
         const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
         if(res.ok) {
-            alert(`Compraste ${cant} entrada(s).`);
-            cargarEventos(); // Recargar la vista
+            alert(`¡Éxito! Compraste ${cant} entrada(s).`);
+            cargarEventos();
         } else {
-            alert("Error: No hay suficientes entradas o alguien te ganó de mano.");
+            alert("❌ Error: No hay suficientes entradas o alguien te ganó de mano.");
             cargarEventos();
         }
     }
@@ -93,9 +104,9 @@
         cargarEventos();
     }
 
-    // Cargar al inicio
+    // Inicializamos
     cargarEventos();
-    // Actualizar pantalla cada 2 segundos para ver en tiempo real si otro compra
+    // Refresco automático cada 2 segundos sin borrar los inputs
     setInterval(cargarEventos, 2000);
 </script>
 </body>
