@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Reservas UNRN</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style> body { background-color: #f8f9fa; } </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="text-center mb-4 text-primary">🎫 Ticket UNRN - Concurrencia</h1>
+
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" onclick="mostrarSeccion('cliente')">Modo Cliente</button></li>
+        <li class="nav-item"><button class="nav-link text-danger" onclick="mostrarSeccion('admin')">Modo Admin</button></li>
+    </ul>
+
+    <div id="seccion-cliente" class="mt-4">
+        <h3>Eventos Disponibles</h3>
+        <div class="row" id="contenedor-eventos"></div>
+    </div>
+
+    <div id="seccion-admin" class="mt-4" style="display: none;">
+        <h3>Panel de Administración</h3>
+        <div class="card p-3 mb-4">
+            <h5>Agregar Nuevo Evento</h5>
+            <div class="d-flex gap-2">
+                <input type="text" id="nuevo-nombre" class="form-control" placeholder="Nombre del Evento">
+                <input type="number" id="nuevo-entradas" class="form-control" placeholder="Cant. Entradas" style="width: 150px;">
+                <button class="btn btn-danger" onclick="agregarEvento()">Crear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://localhost:8080/api";
+
+    function mostrarSeccion(seccion) {
+        document.getElementById('seccion-cliente').style.display = seccion === 'cliente' ? 'block' : 'none';
+        document.getElementById('seccion-admin').style.display = seccion === 'admin' ? 'block' : 'none';
+        cargarEventos();
+    }
+
+    async function cargarEventos() {
+        const res = await fetch(`${API_URL}/eventos`);
+        const eventos = await res.json();
+        const contenedor = document.getElementById('contenedor-eventos');
+        contenedor.innerHTML = '';
+
+        eventos.forEach(ev => {
+            let agotado = ev.entradas === 0;
+            contenedor.innerHTML += `
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm ${agotado ? 'border-danger' : 'border-success'}">
+                        <div class="card-body">
+                            <h5 class="card-title">${ev.nombre}</h5>
+                            <p class="card-text">Disponibles: <strong>${ev.entradas}</strong></p>
+                            <input type="number" id="cant-${ev.id}" class="form-control mb-2" value="1" min="1" max="10" ${agotado ? 'disabled' : ''}>
+                            <button class="btn ${agotado ? 'btn-secondary' : 'btn-success'} w-100"
+                                    onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
+                                ${agotado ? 'Agotado' : 'Comprar Entrada'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    async function comprar(idEvento) {
+        const cant = document.getElementById(`cant-${idEvento}`).value;
+        const cliente = "Cliente-" + Math.floor(Math.random() * 1000); // Simulamos un usuario
+
+        const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
+        if(res.ok) {
+            alert(`Compraste ${cant} entrada(s).`);
+            cargarEventos(); // Recargar la vista
+        } else {
+            alert("Error: No hay suficientes entradas o alguien te ganó de mano.");
+            cargarEventos();
+        }
+    }
+
+    async function agregarEvento() {
+        const nombre = document.getElementById('nuevo-nombre').value;
+        const entradas = document.getElementById('nuevo-entradas').value;
+        if(!nombre || !entradas) return alert("Completa los datos");
+
+        await fetch(`${API_URL}/admin/agregar?nombre=${encodeURIComponent(nombre)}&entradas=${entradas}`, { method: 'POST' });
+        alert("Evento agregado.");
+        document.getElementById('nuevo-nombre').value = '';
+        document.getElementById('nuevo-entradas').value = '';
+        cargarEventos();
+    }
+
+    // Cargar al inicio
+    cargarEventos();
+    // Actualizar pantalla cada 2 segundos para ver en tiempo real si otro compra
+    setInterval(cargarEventos, 2000);
+</script>
+</body>
+</html>
