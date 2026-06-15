@@ -6,33 +6,27 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .hero-section {
-            background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
-            color: white;
-            padding: 3rem 0;
-            border-radius: 0 0 20px 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .hero-section { background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); color: white; padding: 2rem 0; border-radius: 0 0 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .card { transition: transform 0.2s; border: none; border-radius: 15px; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
-        .nav-tabs .nav-link { font-weight: bold; border-radius: 10px 10px 0 0; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important; }
+        .nav-tabs .nav-link { font-weight: bold; border-radius: 10px 10px 0 0; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="hero-section mb-4 text-center">
-    <h1 class="display-4 fw-bold">🎫 Ticket UNRN</h1>
-    <p class="lead">Sistema Concurrente de Venta de Entradas</p>
+    <h1 class="display-5 fw-bold">🎫 Ticket UNRN</h1>
+    <p class="lead mb-0">Sistema Concurrente de Venta de Entradas</p>
 </div>
 
 <div class="container">
-    <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="myTab" role="tablist">
+    <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="myTab">
         <li class="nav-item">
-            <button class="nav-link active bg-white text-primary shadow-sm" id="btn-cliente" onclick="mostrarSeccion('cliente')">👤 Modo Cliente</button>
+            <a class="nav-link active bg-white text-primary shadow-sm" id="btn-cliente" onclick="mostrarSeccion('cliente')">👤 Modo Cliente</a>
         </li>
         <li class="nav-item ms-2">
-            <button class="nav-link bg-light text-danger shadow-sm" id="btn-admin" onclick="intentarAccesoAdmin()">⚙️ Modo Admin</button>
+            <a class="nav-link bg-light text-danger shadow-sm" id="btn-admin" onclick="intentarAccesoAdmin()">⚙️ Modo Admin</a>
         </li>
     </ul>
 
@@ -43,18 +37,25 @@
 
     <div id="seccion-admin" style="display: none;">
         <h3 class="text-danger mb-3 border-bottom pb-2 border-danger">Panel de Administración</h3>
-        <div class="card shadow-sm p-4 mb-4 bg-white">
+
+        <div class="card shadow-sm p-4 mb-4 bg-white border-top border-danger border-3">
             <h5 class="mb-3 text-secondary">➕ Agregar Nuevo Evento</h5>
             <div class="row g-2">
-                <div class="col-md-6">
-                    <input type="text" id="nuevo-nombre" class="form-control form-control-lg" placeholder="Nombre del Evento" aria-label="Nombre del Evento">
-                </div>
-                <div class="col-md-4">
-                    <input type="number" id="nuevo-entradas" class="form-control form-control-lg" placeholder="Cant. Entradas" min="1" aria-label="Cantidad de Entradas">
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-danger btn-lg w-100" onclick="agregarEvento()">Crear</button>
-                </div>
+                <div class="col-md-6"><input type="text" id="nuevo-nombre" class="form-control" placeholder="Nombre del Evento" aria-label="Nombre del Evento"></div>
+                <div class="col-md-4"><input type="number" id="nuevo-entradas" class="form-control" placeholder="Cant. Entradas" min="1" aria-label="Cantidad de Entradas"></div>
+                <div class="col-md-2"><button class="btn btn-danger w-100 fw-bold" onclick="agregarEvento()">Crear</button></div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm p-4 bg-white">
+            <h5 class="mb-3 text-secondary">📋 Gestión de Eventos</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr><th>ID</th><th>Nombre del Evento</th><th>Entradas Disp.</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody id="tabla-admin-body"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -63,24 +64,15 @@
 <script>
     const API_URL = "http://localhost:8080/api";
 
-    // --- LÓGICA DE AUTENTICACIÓN ---
     function intentarAccesoAdmin() {
         Swal.fire({
-            title: 'Acceso Restringido',
-            input: 'password',
-            inputLabel: 'Ingrese la contraseña de administrador (admin123)',
-            inputPlaceholder: 'Contraseña...',
-            showCancelButton: true,
-            confirmButtonText: 'Ingresar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                if (result.value === "admin123") {
-                    mostrarSeccion('admin');
-                    Swal.fire({ icon: 'success', title: 'Acceso concedido', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Contraseña incorrecta' });
-                }
+            title: 'Acceso Restringido', input: 'password', inputLabel: 'Contraseña (admin123)',
+            showCancelButton: true, confirmButtonText: 'Ingresar'
+        }).then((res) => {
+            if (res.isConfirmed && res.value === "admin123") {
+                mostrarSeccion('admin');
+            } else if (res.isConfirmed) {
+                Swal.fire({ icon: 'error', title: 'Contraseña incorrecta' });
             }
         });
     }
@@ -88,15 +80,11 @@
     function mostrarSeccion(seccion) {
         document.getElementById('seccion-cliente').style.display = seccion === 'cliente' ? 'block' : 'none';
         document.getElementById('seccion-admin').style.display = seccion === 'admin' ? 'block' : 'none';
-
-        // Estilos de las pestañas
         document.getElementById('btn-cliente').className = seccion === 'cliente' ? 'nav-link active bg-white text-primary shadow-sm' : 'nav-link bg-light text-secondary shadow-sm';
         document.getElementById('btn-admin').className = seccion === 'admin' ? 'nav-link active bg-white text-danger shadow-sm' : 'nav-link bg-light text-danger shadow-sm';
-
         cargarEventos();
     }
 
-    // --- LÓGICA DEL SISTEMA ---
     async function cargarEventos() {
         const inputs = document.querySelectorAll('input[id^="cant-"]');
         const valoresGuardados = {};
@@ -106,65 +94,92 @@
             const res = await fetch(`${API_URL}/eventos`);
             const eventos = await res.json();
 
-            const contenedor = document.getElementById('contenedor-eventos');
-            contenedor.innerHTML = '';
+            let htmlCliente = '';
+            let htmlAdmin = '';
 
             eventos.forEach(ev => {
                 let agotado = ev.entradas === 0;
                 let valorActual = valoresGuardados[`cant-${ev.id}`] || 1;
 
-                contenedor.innerHTML += `
+                // Tarjetas para el Cliente
+                htmlCliente += `
                     <div class="col-md-4 mb-4">
-                        <div class="card shadow-sm h-100 ${agotado ? 'border-danger opacity-75' : ''}">
+                        <div class="card shadow-sm h-100 ${agotado ? 'border-danger opacity-75' : 'border-primary'}">
                             <div class="card-body d-flex flex-column">
-                                <h4 class="card-title text-primary">${ev.nombre}</h4>
-                                <h2 class="card-text mb-4 ${agotado ? 'text-danger' : 'text-success'}">
-                                    ${ev.entradas} <span class="fs-6 text-muted">disponibles</span>
-                                </h2>
+                                <h5 class="card-title text-primary fw-bold">${ev.nombre}</h5>
+                                <h3 class="card-text mb-3 ${agotado ? 'text-danger' : 'text-success'}">${ev.entradas} <span class="fs-6 text-muted">disp.</span></h3>
                                 <div class="mt-auto">
-                                    <input type="number" id="cant-${ev.id}" class="form-control mb-3 text-center fw-bold" value="${valorActual}" min="1" max="10" ${agotado ? 'disabled' : ''}>
-                                    <button class="btn btn-lg ${agotado ? 'btn-outline-danger' : 'btn-primary'} w-100 fw-bold"
-                                            onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
+                                    <input type="number" id="cant-${ev.id}" class="form-control mb-2 text-center" value="${valorActual}" min="1" max="10" ${agotado ? 'disabled' : ''}>
+                                    <button class="btn ${agotado ? 'btn-outline-danger' : 'btn-primary'} w-100 fw-bold" onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
                                         ${agotado ? '⛔ Agotado' : '🛒 Comprar'}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>`;
+
+                // Filas para la tabla del Admin
+                htmlAdmin += `
+                    <tr>
+                        <td><strong>#${ev.id}</strong></td>
+                        <td>${ev.nombre}</td>
+                        <td><span class="badge ${agotado ? 'bg-danger' : 'bg-success'} fs-6">${ev.entradas}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning me-1" onclick="abrirEdicion(${ev.id}, '${ev.nombre.replace(/'/g, "\\'")}', ${ev.entradas})">✏️ Editar</button>
+                            <button class="btn btn-sm btn-danger" onclick="borrarEvento(${ev.id})">🗑️ Borrar</button>
+                        </td>
+                    </tr>`;
             });
-        } catch (error) {
-            console.error("No se pudo conectar con el servidor Java.");
-        }
+
+            document.getElementById('contenedor-eventos').innerHTML = htmlCliente;
+            document.getElementById('tabla-admin-body').innerHTML = htmlAdmin;
+        } catch (error) { console.error("Error conectando al servidor."); }
     }
 
     async function comprar(idEvento) {
         const cant = document.getElementById(`cant-${idEvento}`).value;
         const cliente = "Cliente-" + Math.floor(Math.random() * 1000);
-
-        try {
-            const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
-            if(res.ok) {
-                Swal.fire({ icon: 'success', title: '¡Compra Exitosa!', text: `Has adquirido ${cant} entrada(s).` });
-            } else {
-                Swal.fire({ icon: 'error', title: 'Oops...', text: 'No hay suficientes entradas o alguien las compró primero.' });
-            }
-            cargarEventos();
-        } catch(e) {
-            Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'El servidor está apagado.' });
-        }
+        const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
+        if(res.ok) Swal.fire({ icon: 'success', title: '¡Éxito!', text: `Compraste ${cant} entrada(s).`, toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+        else Swal.fire({ icon: 'error', title: 'Rechazado', text: 'Stock insuficiente.' });
+        cargarEventos();
     }
 
     async function agregarEvento() {
         const nombre = document.getElementById('nuevo-nombre').value;
         const entradas = document.getElementById('nuevo-entradas').value;
-        if(!nombre || !entradas) return Swal.fire({ icon: 'warning', title: 'Atención', text: 'Completa todos los campos.' });
-
+        if(!nombre || !entradas) return Swal.fire({ icon: 'warning', title: 'Atención', text: 'Completa los campos.' });
         await fetch(`${API_URL}/admin/agregar?nombre=${encodeURIComponent(nombre)}&entradas=${entradas}`, { method: 'POST' });
-        Swal.fire({ icon: 'success', title: 'Evento Creado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-
-        document.getElementById('nuevo-nombre').value = '';
-        document.getElementById('nuevo-entradas').value = '';
+        document.getElementById('nuevo-nombre').value = ''; document.getElementById('nuevo-entradas').value = '';
         cargarEventos();
+    }
+
+    async function borrarEvento(id) {
+        if(confirm("¿Seguro que deseas eliminar este evento?")) {
+            await fetch(`${API_URL}/admin/eliminar?id=${id}`, { method: 'POST' });
+            cargarEventos();
+        }
+    }
+
+    function abrirEdicion(id, nombreActual, entradasActuales) {
+        Swal.fire({
+            title: 'Editar Evento',
+            html: `<input id="swal-nombre" class="form-control mb-2" value="${nombreActual}">
+                   <input id="swal-entradas" type="number" class="form-control" value="${entradasActuales}">`,
+            showCancelButton: true, confirmButtonText: 'Guardar',
+            preConfirm: () => {
+                return {
+                    nombre: document.getElementById('swal-nombre').value,
+                    entradas: document.getElementById('swal-entradas').value
+                }
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                await fetch(`${API_URL}/admin/editar?id=${id}&nombre=${encodeURIComponent(result.value.nombre)}&entradas=${result.value.entradas}`, { method: 'POST' });
+                cargarEventos();
+                Swal.fire({ icon: 'success', title: 'Guardado', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false});
+            }
+        });
     }
 
     cargarEventos();

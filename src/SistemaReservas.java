@@ -14,8 +14,21 @@ public class SistemaReservas {
         contadorIds++;
     }
 
+    public synchronized boolean editarEvento(int id, String nuevoNombre, int nuevasEntradas) {
+        Evento ev = eventos.get(id);
+        if (ev != null) {
+            ev.nombre = nuevoNombre;
+            ev.entradasDisponibles = nuevasEntradas;
+            System.out.println("[EDITAR] Evento " + id + " modificado.");
+            return true;
+        }
+        return false;
+    }
+
     public synchronized void eliminarEvento(int id) {
-        eventos.remove(id);
+        if(eventos.remove(id) != null) {
+            System.out.println("[ELIMINAR] Evento " + id + " eliminado.");
+        }
     }
 
     // Funciones de Cliente

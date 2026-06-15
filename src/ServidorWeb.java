@@ -39,8 +39,8 @@ public class ServidorWeb {
                 boolean exito = sistema.comprarEntrada(id, cliente, cant);
                 enviarRespuesta(exchange, exito ? 200 : 400, exito ? "Exito" : "Sin stock");
             } catch (Exception e) {
-                e.printStackTrace();
-                enviarRespuesta(exchange, 500, "Error procesando la compra");
+                System.err.println("Error en la solicitud: " + e.getMessage());
+                enviarRespuesta(exchange, 500, "Error Interno del Servidor");
             }
         });
 
@@ -62,8 +62,42 @@ public class ServidorWeb {
                 sistema.agregarEvento(nombre, entradas);
                 enviarRespuesta(exchange, 200, "Evento Agregado");
             } catch (Exception e) {
-                e.printStackTrace();
-                enviarRespuesta(exchange, 500, "Error agregando evento");
+                System.err.println("Error en la solicitud: " + e.getMessage());
+                enviarRespuesta(exchange, 500, "Error Interno del Servidor");
+            }
+        });
+
+        // Endpoint POST: Eliminar Evento
+        server.createContext("/api/admin/eliminar", exchange -> {
+            agregarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) { enviarRespuesta(exchange, 200, "OK"); return; }
+            try {
+                int id = Integer.parseInt(extraerParametro(exchange.getRequestURI().getQuery(), "id"));
+                sistema.eliminarEvento(id);
+                enviarRespuesta(exchange, 200, "Evento Eliminado");
+            } catch (Exception e) { enviarRespuesta(exchange, 500, "Error"); }
+        });
+
+        // Endpoint POST: Editar Evento
+        server.createContext("/api/admin/editar", exchange -> {
+            agregarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) { enviarRespuesta(exchange, 200, "OK"); return; }
+            try {
+                String query = exchange.getRequestURI().getQuery();
+                int id = Integer.parseInt(extraerParametro(query, "id"));
+                String nombre = extraerParametro(query, "nombre").replace("%20", " ");
+                int entradas = Integer.parseInt(extraerParametro(query, "entradas"));
+
+                boolean exito = sistema.editarEvento(id, nombre, entradas);
+                if (exito) {
+                    enviarRespuesta(exchange, 200, "Evento Editado");
+                } else {
+                    enviarRespuesta(exchange, 404, "Evento no encontrado");
+                }
+
+            } catch (Exception e) {
+                System.err.println("Error al editar: " + e.getMessage());
+                enviarRespuesta(exchange, 500, "Error");
             }
         });
 
@@ -75,11 +109,13 @@ public class ServidorWeb {
     private static void enviarRespuesta(HttpExchange exchange, int code, String response) throws IOException {
         // 2. Consumimos la petición entrante para liberar el socket
         InputStream is = exchange.getRequestBody();
-        while(is.read() != -1) {}
+        while(is.read() != -1) {
+            // Consumimos el cuerpo de la petición para liberar el socket.
+        }
         is.close();
 
         // 3. Forzamos codificación UTF-8 para que los bytes cuadren exacto y evitemos el Error 400
-        byte[] bytes = response.getBytes("UTF-8");
+        byte[] bytes = response.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=UTF-8");
         exchange.sendResponseHeaders(code, bytes.length);
 
