@@ -4,30 +4,57 @@
     <meta charset="UTF-8">
     <title>Sistema de Reservas UNRN</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style> body { background-color: #f8f9fa; } </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hero-section {
+            background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+            color: white;
+            padding: 3rem 0;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .card { transition: transform 0.2s; border: none; border-radius: 15px; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
+        .nav-tabs .nav-link { font-weight: bold; border-radius: 10px 10px 0 0; }
+    </style>
 </head>
 <body>
-<div class="container mt-5">
-    <h1 class="text-center mb-4 text-primary">🎫 Ticket UNRN - Concurrencia</h1>
 
-    <ul class="nav nav-tabs" id="myTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" onclick="mostrarSeccion('cliente')">Modo Cliente</button></li>
-        <li class="nav-item"><button class="nav-link text-danger" onclick="mostrarSeccion('admin')">Modo Admin</button></li>
+<div class="hero-section mb-4 text-center">
+    <h1 class="display-4 fw-bold">🎫 Ticket UNRN</h1>
+    <p class="lead">Sistema Concurrente de Venta de Entradas</p>
+</div>
+
+<div class="container">
+    <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="myTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active bg-white text-primary shadow-sm" id="btn-cliente" onclick="mostrarSeccion('cliente')">👤 Modo Cliente</button>
+        </li>
+        <li class="nav-item ms-2">
+            <button class="nav-link bg-light text-danger shadow-sm" id="btn-admin" onclick="intentarAccesoAdmin()">⚙️ Modo Admin</button>
+        </li>
     </ul>
 
-    <div id="seccion-cliente" class="mt-4">
-        <h3>Eventos Disponibles</h3>
+    <div id="seccion-cliente">
+        <h3 class="text-secondary mb-3 border-bottom pb-2">Próximos Eventos</h3>
         <div class="row" id="contenedor-eventos"></div>
     </div>
 
-    <div id="seccion-admin" class="mt-4" style="display: none;">
-        <h3>Panel de Administración</h3>
-        <div class="card p-3 mb-4">
-            <h5>Agregar Nuevo Evento</h5>
-            <div class="d-flex gap-2">
-                <input type="text" id="nuevo-nombre" class="form-control" placeholder="Nombre del Evento" aria-label="Nombre del Evento">
-                <input type="number" id="nuevo-entradas" class="form-control" placeholder="Cant. Entradas" style="width: 150px;" aria-label="Cantidad de Entradas">
-                <button class="btn btn-danger" onclick="agregarEvento()">Crear</button>
+    <div id="seccion-admin" style="display: none;">
+        <h3 class="text-danger mb-3 border-bottom pb-2 border-danger">Panel de Administración</h3>
+        <div class="card shadow-sm p-4 mb-4 bg-white">
+            <h5 class="mb-3 text-secondary">➕ Agregar Nuevo Evento</h5>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <input type="text" id="nuevo-nombre" class="form-control form-control-lg" placeholder="Nombre del Evento" aria-label="Nombre del Evento">
+                </div>
+                <div class="col-md-4">
+                    <input type="number" id="nuevo-entradas" class="form-control form-control-lg" placeholder="Cant. Entradas" min="1" aria-label="Cantidad de Entradas">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-danger btn-lg w-100" onclick="agregarEvento()">Crear</button>
+                </div>
             </div>
         </div>
     </div>
@@ -36,77 +63,111 @@
 <script>
     const API_URL = "http://localhost:8080/api";
 
+    // --- LÓGICA DE AUTENTICACIÓN ---
+    function intentarAccesoAdmin() {
+        Swal.fire({
+            title: 'Acceso Restringido',
+            input: 'password',
+            inputLabel: 'Ingrese la contraseña de administrador (admin123)',
+            inputPlaceholder: 'Contraseña...',
+            showCancelButton: true,
+            confirmButtonText: 'Ingresar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                if (result.value === "admin123") {
+                    mostrarSeccion('admin');
+                    Swal.fire({ icon: 'success', title: 'Acceso concedido', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Contraseña incorrecta' });
+                }
+            }
+        });
+    }
+
     function mostrarSeccion(seccion) {
         document.getElementById('seccion-cliente').style.display = seccion === 'cliente' ? 'block' : 'none';
         document.getElementById('seccion-admin').style.display = seccion === 'admin' ? 'block' : 'none';
+
+        // Estilos de las pestañas
+        document.getElementById('btn-cliente').className = seccion === 'cliente' ? 'nav-link active bg-white text-primary shadow-sm' : 'nav-link bg-light text-secondary shadow-sm';
+        document.getElementById('btn-admin').className = seccion === 'admin' ? 'nav-link active bg-white text-danger shadow-sm' : 'nav-link bg-light text-danger shadow-sm';
+
         cargarEventos();
     }
 
+    // --- LÓGICA DEL SISTEMA ---
     async function cargarEventos() {
-        // 1. Guardamos lo que el usuario esté escribiendo en los inputs en este momento
         const inputs = document.querySelectorAll('input[id^="cant-"]');
         const valoresGuardados = {};
         inputs.forEach(inp => valoresGuardados[inp.id] = inp.value);
 
-        // 2. Traemos los datos frescos del servidor
-        const res = await fetch(`${API_URL}/eventos`);
-        const eventos = await res.json();
+        try {
+            const res = await fetch(`${API_URL}/eventos`);
+            const eventos = await res.json();
 
-        const contenedor = document.getElementById('contenedor-eventos');
-        contenedor.innerHTML = '';
+            const contenedor = document.getElementById('contenedor-eventos');
+            contenedor.innerHTML = '';
 
-        // 3. Redibujamos las tarjetas
-        eventos.forEach(ev => {
-            let agotado = ev.entradas === 0;
-            // Recuperamos el valor guardado (o ponemos 1 por defecto)
-            let valorActual = valoresGuardados[`cant-${ev.id}`] || 1;
+            eventos.forEach(ev => {
+                let agotado = ev.entradas === 0;
+                let valorActual = valoresGuardados[`cant-${ev.id}`] || 1;
 
-            contenedor.innerHTML += `
-                <div class="col-md-4 mb-3">
-                    <div class="card shadow-sm ${agotado ? 'border-danger' : 'border-success'}">
-                        <div class="card-body">
-                            <h5 class="card-title">${ev.nombre}</h5>
-                            <p class="card-text">Disponibles: <strong>${ev.entradas}</strong></p>
-                            <input type="number" id="cant-${ev.id}" class="form-control mb-2" value="${valorActual}" min="1" max="10" ${agotado ? 'disabled' : ''}>
-                            <button class="btn ${agotado ? 'btn-secondary' : 'btn-success'} w-100"
-                                    onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
-                                ${agotado ? 'Agotado' : 'Comprar Entrada'}
-                            </button>
+                contenedor.innerHTML += `
+                    <div class="col-md-4 mb-4">
+                        <div class="card shadow-sm h-100 ${agotado ? 'border-danger opacity-75' : ''}">
+                            <div class="card-body d-flex flex-column">
+                                <h4 class="card-title text-primary">${ev.nombre}</h4>
+                                <h2 class="card-text mb-4 ${agotado ? 'text-danger' : 'text-success'}">
+                                    ${ev.entradas} <span class="fs-6 text-muted">disponibles</span>
+                                </h2>
+                                <div class="mt-auto">
+                                    <input type="number" id="cant-${ev.id}" class="form-control mb-3 text-center fw-bold" value="${valorActual}" min="1" max="10" ${agotado ? 'disabled' : ''}>
+                                    <button class="btn btn-lg ${agotado ? 'btn-outline-danger' : 'btn-primary'} w-100 fw-bold"
+                                            onclick="comprar(${ev.id})" ${agotado ? 'disabled' : ''}>
+                                        ${agotado ? '⛔ Agotado' : '🛒 Comprar'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>`;
-        });
+                    </div>`;
+            });
+        } catch (error) {
+            console.error("No se pudo conectar con el servidor Java.");
+        }
     }
 
     async function comprar(idEvento) {
         const cant = document.getElementById(`cant-${idEvento}`).value;
         const cliente = "Cliente-" + Math.floor(Math.random() * 1000);
 
-        const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
-        if(res.ok) {
-            alert(`¡Éxito! Compraste ${cant} entrada(s).`);
+        try {
+            const res = await fetch(`${API_URL}/comprar?id=${idEvento}&cant=${cant}&cliente=${cliente}`, { method: 'POST' });
+            if(res.ok) {
+                Swal.fire({ icon: 'success', title: '¡Compra Exitosa!', text: `Has adquirido ${cant} entrada(s).` });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: 'No hay suficientes entradas o alguien las compró primero.' });
+            }
             cargarEventos();
-        } else {
-            alert("❌ Error: No hay suficientes entradas o alguien te ganó de mano.");
-            cargarEventos();
+        } catch(e) {
+            Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'El servidor está apagado.' });
         }
     }
 
     async function agregarEvento() {
         const nombre = document.getElementById('nuevo-nombre').value;
         const entradas = document.getElementById('nuevo-entradas').value;
-        if(!nombre || !entradas) return alert("Completa los datos");
+        if(!nombre || !entradas) return Swal.fire({ icon: 'warning', title: 'Atención', text: 'Completa todos los campos.' });
 
         await fetch(`${API_URL}/admin/agregar?nombre=${encodeURIComponent(nombre)}&entradas=${entradas}`, { method: 'POST' });
-        alert("Evento agregado.");
+        Swal.fire({ icon: 'success', title: 'Evento Creado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+
         document.getElementById('nuevo-nombre').value = '';
         document.getElementById('nuevo-entradas').value = '';
         cargarEventos();
     }
 
-    // Inicializamos
     cargarEventos();
-    // Refresco automático cada 2 segundos sin borrar los inputs
     setInterval(cargarEventos, 2000);
 </script>
 </body>
