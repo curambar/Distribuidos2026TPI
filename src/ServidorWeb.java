@@ -103,7 +103,12 @@ public class ServidorWeb {
 
         server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         server.start();
-        System.out.println("🚀 Servidor Java corriendo en http://localhost:8080");
+        System.out.println("==================================================");
+        System.out.println("🚀 BACKEND JAVA (API REST) EN LINEA");
+        System.out.println("📡 Escuchando peticiones en el puerto 8080...");
+        System.out.println("👉 ATENCIÓN: Para ver la aplicación, abre el archivo 'index.html'");
+        System.out.println("   directamente en tu navegador web. No entres al localhost.");
+        System.out.println("==================================================");
     }
 
     private static void enviarRespuesta(HttpExchange exchange, int code, String response) throws IOException {
